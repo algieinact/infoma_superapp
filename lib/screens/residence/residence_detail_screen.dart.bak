@@ -1,0 +1,531 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
+import '../../services/api_service.dart';
+
+class ResidenceDetailScreen extends StatefulWidget {
+  final int residenceId;
+
+  const ResidenceDetailScreen({Key? key, required this.residenceId})
+    : super(key: key);
+
+  @override
+  _ResidenceDetailScreenState createState() => _ResidenceDetailScreenState();
+}
+
+class _ResidenceDetailScreenState extends State<ResidenceDetailScreen> {
+  bool isLoading = true;
+  bool isBookmarking = false;
+  bool isBookmarked = false;
+  Map<String, dynamic>? residenceData;
+  int currentImageIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadResidenceDetail();
+  }
+
+  Future<void> _refreshBookmarkStatus() async {
+    try {
+      final bookmarks = await ApiService.getBookmarks();
+      final isBookmarkedResidence = bookmarks.any(
+        (bookmark) =>
+            bookmark['type'] == 'Residence' &&
+            bookmark['item']?['id'] == widget.residenceId,
+      );
+
+      if (mounted) {
+        setState(() {
+          isBookmarked = isBookmarkedResidence;
+        });
+      }
+    } catch (e) {
+      print('Error refreshing bookmark status: $e');
+    }
+  }
+
+  Future<void> _loadResidenceDetail() async {
+    try {
+      final data = await ApiService.getResidenceDetail(widget.residenceId);
+      final bookmarks = await ApiService.getBookmarks();
+
+      final isBookmarkedResidence = bookmarks.any(
+        (bookmark) =>
+            bookmark['type'] == 'Residence' &&
+            bookmark['item']?['id'] == widget.residenceId,
+      );
+
+      setState(() {
+        residenceData = data;
+        isBookmarked = isBookmarkedResidence;
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading residence detail: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _toggleBookmark() async {
+    if (isBookmarking) return;
+    
+    try {
+      setState(() {
+        isBookmarking = true;
+      });
+
+      bool success;
+      if (isBookmarked) {
+        success = await ApiService.removeBookmark(
+          'residence',
+          widget.residenceId,
+        );
+      } else {
+        success = await ApiService.addBookmark('residence', widget.residenceId);
+      }
+
+      if (success) {
+        await _refreshBookmarkStatus();
+        
+        if (!mounted) return;
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isBookmarked ? 'Bookmark added' : 'Bookmark removed'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        if (!mounted) return;
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update bookmark'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error toggling bookmark: $e');
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update bookmark'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isBookmarking = false;
+        });
+      }
+    }
+  }
+        isBookmarking = false;
+      });
+    }
+  }
+
+  String _formatPrice(dynamic price) {
+    if (price == null) return 'Rp 0';
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+    return formatter.format(double.parse(price.toString()));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final residence = residenceData?['data'] ?? {};
+    final List<String> images = List<String>.from(residence['images'] ?? []);
+
+    return Scaffold(
+      body: CustomScrollView(
+        slivers: [
+          // App Bar with Image
+          SliverAppBar(
+            expandedHeight: 300,
+            pinned: true,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Stack(
+                children: [
+                  // Image Carousel
+                  PageView.builder(
+                    itemCount: images.isEmpty ? 1 : images.length,
+                    onPageChanged: (index) {
+                      setState(() {
+                        currentImageIndex = index;
+                      });
+                    },
+                    itemBuilder: (context, index) {
+                      return images.isEmpty
+                          ? Container(
+                              color: Colors.grey[200],
+                              child: Icon(
+                                Icons.home_work,
+                                size: 100,
+                                color: Colors.grey[400],
+                              ),
+                            )
+                          : CachedNetworkImage(
+                              imageUrl:
+                                  'http://127.0.0.1:8000/storage/${images[index]}',
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) =>
+                                  Center(child: CircularProgressIndicator()),
+                              errorWidget: (context, url, error) => Container(
+                                color: Colors.grey[200],
+                                child: Icon(
+                                  Icons.home_work,
+                                  size: 100,
+                                  color: Colors.grey[400],
+                                ),
+                              ),
+                            );
+                    },
+                  ),
+                  // Image Indicator
+                  if (images.length > 1)
+                    Positioned(
+                      bottom: 16,
+                      left: 0,
+                      right: 0,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: images.asMap().entries.map((entry) {
+                          return Container(
+                            width: 8,
+                            height: 8,
+                            margin: EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: currentImageIndex == entry.key
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(0.5),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+
+          // Content
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Category and Status
+                  Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          residence['category']?['name'] ?? 'Uncategorized',
+                          style: GoogleFonts.poppins(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      Spacer(),
+                      if (residence['available_slots'] > 0)
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${residence['available_slots']} Slots Available',
+                            style: GoogleFonts.poppins(
+                              color: Colors.green,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+
+                  // Title and Price
+                  Text(
+                    residence['name'] ?? 'Untitled Residence',
+                    style: GoogleFonts.poppins(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  if (residence['discount_value'] != null)
+                    Text(
+                      _formatPrice(residence['price']),
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        color: Colors.grey,
+                        decoration: TextDecoration.lineThrough,
+                      ),
+                    ),
+                  Text(
+                    _formatPrice(
+                      residence['discounted_price'] ?? residence['price'],
+                    ),
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      color: Colors.blue,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (residence['discount_value'] != null)
+                    Container(
+                      margin: EdgeInsets.only(top: 8),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        residence['discount_type'] == 'percentage'
+                            ? '${residence['discount_value']}% OFF'
+                            : 'Save ${_formatPrice(residence['discount_value'])}',
+                        style: GoogleFonts.poppins(
+                          color: Colors.red,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  SizedBox(height: 24),
+
+                  // Location
+                  Row(
+                    children: [
+                      Icon(Icons.location_on_outlined, color: Colors.grey[600]),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          residence['address'] ?? 'No address provided',
+                          style: GoogleFonts.poppins(
+                            color: Colors.grey[600],
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 24),
+
+                  // Facilities
+                  Text(
+                    'Facilities',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: (residence['facilities'] as List<dynamic>? ?? [])
+                        .map((facility) {
+                          return Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey[300]!),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              facility.toString(),
+                              style: GoogleFonts.poppins(
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          );
+                        })
+                        .toList(),
+                  ),
+                  SizedBox(height: 24),
+
+                  // Description
+                  Text(
+                    'Description',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    residence['description'] ?? 'No description provided',
+                    style: GoogleFonts.poppins(
+                      color: Colors.grey[600],
+                      height: 1.5,
+                    ),
+                  ),
+                  SizedBox(height: 24),
+
+                  // Provider Info
+                  Text(
+                    'Provider Information',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            residence['provider']?['name'] ??
+                                'Unknown Provider',
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.email_outlined,
+                                size: 20,
+                                color: Colors.grey[600],
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                residence['provider']?['email'] ??
+                                    'No email provided',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.phone_outlined,
+                                size: 20,
+                                color: Colors.grey[600],
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                residence['provider']?['phone'] ??
+                                    'No phone provided',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: Container(
+        padding: EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: Offset(0, -5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: isBookmarking ? null : _toggleBookmark,
+                icon: isBookmarking
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.blue,
+                          ),
+                        ),
+                      )
+                    : Icon(
+                        isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                      ),
+                label: Text(isBookmarked ? 'Bookmarked' : 'Bookmark'),
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.blue,
+                  elevation: 0,
+                  side: BorderSide(color: Colors.blue),
+                ),
+              ),
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: residence['available_slots'] > 0
+                    ? () {
+                        // TODO: Implement booking functionality
+                      }
+                    : null,
+                icon: Icon(Icons.shopping_cart_outlined),
+                label: Text('Book Now'),
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
