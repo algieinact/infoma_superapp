@@ -10,10 +10,11 @@ class BookmarkScreen extends StatefulWidget {
   _BookmarkScreenState createState() => _BookmarkScreenState();
 }
 
-class _BookmarkScreenState extends State<BookmarkScreen> with SingleTickerProviderStateMixin {
+class _BookmarkScreenState extends State<BookmarkScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  
-    List<Map<String, dynamic>> bookmarkedResidences = [];
+
+  List<Map<String, dynamic>> bookmarkedResidences = [];
   List<Map<String, dynamic>> bookmarkedActivities = [];
   bool isLoading = true;
 
@@ -31,7 +32,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> with SingleTickerProvid
       });
 
       final bookmarks = await ApiService.getBookmarks();
-      
+
       final residences = <Map<String, dynamic>>[];
       final activities = <Map<String, dynamic>>[];
 
@@ -63,10 +64,7 @@ class _BookmarkScreenState extends State<BookmarkScreen> with SingleTickerProvid
   Widget build(BuildContext context) {
     if (isLoading) {
       return Scaffold(
-        appBar: AppBar(
-          title: Text('Bookmarks'),
-          centerTitle: true,
-        ),
+        appBar: AppBar(title: Text('Bookmarks'), centerTitle: true),
         body: Center(child: CircularProgressIndicator()),
       );
     }
@@ -140,18 +138,12 @@ class _BookmarkScreenState extends State<BookmarkScreen> with SingleTickerProvid
           SizedBox(height: 16),
           Text(
             message,
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              color: Colors.grey[600],
-            ),
+            style: GoogleFonts.poppins(fontSize: 18, color: Colors.grey[600]),
           ),
           SizedBox(height: 8),
           Text(
             'Start bookmarking to see them here',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
+            style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[500]),
           ),
         ],
       ),

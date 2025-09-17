@@ -169,10 +169,7 @@ class ApiService {
       final response = await http.post(
         Uri.parse('$baseUrl/user/bookmarks'),
         headers: await _getHeaders(),
-        body: jsonEncode({
-          'type': type.toLowerCase(),
-          'id': id,
-        }),
+        body: jsonEncode({'type': type.toLowerCase(), 'id': id}),
       );
 
       if (response.statusCode == 200) {
@@ -194,10 +191,7 @@ class ApiService {
       final response = await http.delete(
         Uri.parse('$baseUrl/user/bookmarks'),
         headers: await _getHeaders(),
-        body: jsonEncode({
-          'type': type.toLowerCase(),
-          'id': id,
-        }),
+        body: jsonEncode({'type': type.toLowerCase(), 'id': id}),
       );
 
       if (response.statusCode == 200) {

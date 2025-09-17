@@ -8,7 +8,7 @@ class ActivityDetailScreen extends StatefulWidget {
   final int activityId;
 
   const ActivityDetailScreen({Key? key, required this.activityId})
-      : super(key: key);
+    : super(key: key);
 
   @override
   _ActivityDetailScreenState createState() => _ActivityDetailScreenState();
@@ -76,7 +76,7 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
 
   Future<void> _toggleBookmark() async {
     if (isBookmarking) return;
-    
+
     try {
       setState(() {
         isBookmarking = true;
@@ -84,31 +84,36 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
 
       final previousState = isBookmarked;
       bool success;
-      
+
       if (previousState) {
-        success = await ApiService.removeBookmark('activity', widget.activityId);
+        success = await ApiService.removeBookmark(
+          'activity',
+          widget.activityId,
+        );
       } else {
         success = await ApiService.addBookmark('activity', widget.activityId);
       }
 
       if (success) {
-        await _refreshBookmarkStatus();  // Refresh status after toggle
+        await _refreshBookmarkStatus(); // Refresh status after toggle
       }
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(success
-              ? (previousState ? 'Bookmark removed' : 'Bookmark added')
-              : 'Failed to update bookmark'),
+          content: Text(
+            success
+                ? (previousState ? 'Bookmark removed' : 'Bookmark added')
+                : 'Failed to update bookmark',
+          ),
           duration: Duration(seconds: 2),
         ),
       );
     } catch (e) {
       print('Error toggling bookmark: $e');
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to update bookmark'),
@@ -204,9 +209,8 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                           : CachedNetworkImage(
                               imageUrl: images[index],
                               fit: BoxFit.cover,
-                              placeholder: (context, url) => Center(
-                                child: CircularProgressIndicator(),
-                              ),
+                              placeholder: (context, url) =>
+                                  Center(child: CircularProgressIndicator()),
                               errorWidget: (context, url, error) =>
                                   Icon(Icons.error),
                             );
@@ -334,13 +338,13 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.blue,
+                          ),
                         ),
                       )
                     : Icon(
-                        isBookmarked
-                            ? Icons.bookmark
-                            : Icons.bookmark_border,
+                        isBookmarked ? Icons.bookmark : Icons.bookmark_border,
                       ),
                 label: Text(isBookmarked ? 'Bookmarked' : 'Bookmark'),
                 style: ElevatedButton.styleFrom(

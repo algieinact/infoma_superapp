@@ -8,7 +8,7 @@ class ResidenceDetailScreen extends StatefulWidget {
   final int residenceId;
 
   const ResidenceDetailScreen({Key? key, required this.residenceId})
-      : super(key: key);
+    : super(key: key);
 
   @override
   _ResidenceDetailScreenState createState() => _ResidenceDetailScreenState();
@@ -76,7 +76,7 @@ class _ResidenceDetailScreenState extends State<ResidenceDetailScreen> {
 
   Future<void> _toggleBookmark() async {
     if (isBookmarking) return;
-    
+
     try {
       setState(() {
         isBookmarking = true;
@@ -84,7 +84,7 @@ class _ResidenceDetailScreenState extends State<ResidenceDetailScreen> {
 
       final previousState = isBookmarked;
       bool success;
-      
+
       if (previousState) {
         success = await ApiService.removeBookmark(
           'residence',
@@ -95,23 +95,25 @@ class _ResidenceDetailScreenState extends State<ResidenceDetailScreen> {
       }
 
       if (success) {
-        await _refreshBookmarkStatus();  // Refresh status after toggle
+        await _refreshBookmarkStatus(); // Refresh status after toggle
       }
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(success
-              ? (previousState ? 'Bookmark removed' : 'Bookmark added')
-              : 'Failed to update bookmark'),
+          content: Text(
+            success
+                ? (previousState ? 'Bookmark removed' : 'Bookmark added')
+                : 'Failed to update bookmark',
+          ),
           duration: Duration(seconds: 2),
         ),
       );
     } catch (e) {
       print('Error toggling bookmark: $e');
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to update bookmark'),
@@ -171,9 +173,8 @@ class _ResidenceDetailScreenState extends State<ResidenceDetailScreen> {
                           : CachedNetworkImage(
                               imageUrl: images[index],
                               fit: BoxFit.cover,
-                              placeholder: (context, url) => Center(
-                                child: CircularProgressIndicator(),
-                              ),
+                              placeholder: (context, url) =>
+                                  Center(child: CircularProgressIndicator()),
                               errorWidget: (context, url, error) =>
                                   Icon(Icons.error),
                             );
@@ -301,13 +302,13 @@ class _ResidenceDetailScreenState extends State<ResidenceDetailScreen> {
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.blue,
+                          ),
                         ),
                       )
                     : Icon(
-                        isBookmarked
-                            ? Icons.bookmark
-                            : Icons.bookmark_border,
+                        isBookmarked ? Icons.bookmark : Icons.bookmark_border,
                       ),
                 label: Text(isBookmarked ? 'Bookmarked' : 'Bookmark'),
                 style: ElevatedButton.styleFrom(
